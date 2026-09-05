@@ -58,7 +58,9 @@ Not evaluated:
   Owner: `backend-architecture-review`
 - business rules: bypass paths, duplication, state transitions
   Owner: `backend-domain-review`
-- SQL, performance, security, error handling, tests
+- transactions, concurrency, constraints, query cost, migrations
+  Owner: `backend-persistence-review`
+- security, error handling, tests
   Owner: not assigned yet
 
 ## Dependency map
@@ -113,8 +115,9 @@ UsersLayer ⇄ SessionsLayer       cycle
 
 Одна строка на замеченное, с именем skill-владельца: «`OrderService`
 принимает бизнес-решения и формирует HTTP-ответ — backend-architecture-review
-(responsibilities)»; «`x.ts:12` — SQL-строка склеивается вручную — владелец
-не назначен».
+(responsibilities)»; «`reserve.ts:12` — остаток обновляется вне транзакции заказа —
+backend-persistence-review»; «`x.ts:12` — SQL-строка склеивается вручную —
+security, владелец не назначен».
 ```
 
 ## Пример заполненного finding

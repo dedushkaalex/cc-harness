@@ -1,6 +1,6 @@
 ---
 name: backend-architecture-review
-description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review и backend-domain-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; не покрывает SQL, performance, security, error handling, тесты, naming, style; защиту и дублирование business rules — это backend-domain-review.
+description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review, backend-domain-review и backend-persistence-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; защиту и дублирование business rules — это backend-domain-review; transactions, concurrency, constraints хранилища, query cost, migrations — это backend-persistence-review; не покрывает security, error handling, тесты, naming, style.
 ---
 
 # Backend architecture review
@@ -26,7 +26,9 @@ description: Review backend component responsibilities and placement of work —
 
 Владелец — `backend-domain-review`: можно ли обойти бизнес-правило другим путём записи state, продублировано ли одно правило в независимых местах, достижим ли недопустимый переход статуса, держит ли представление concept своё правило. Правило разделения: здесь — в компоненте какого слоя лежит правило; там — можно ли его обойти. Правило в repository, через который идут все записи, — здесь; правило в своём слое, которое обходит другой путь, — там.
 
-SQL, индексы, performance, security, корректность auth, error handling, тесты, naming, style — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
+Владелец — `backend-persistence-review`: transaction boundaries и atomicity, concurrency, constraints хранилища, стоимость запросов, idempotency записей, совместимость миграций. Транзакция лежит не в том компоненте — здесь; покрывает ли она обе записи — там.
+
+Security, корректность auth, error handling, тесты, naming, style, performance вне persistence — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
 Всё, через что компонент получает другие компоненты (импорты, параметры конструкторов и функций, объявленные требования, глобальные объекты), **собирается** на Step 1 в колонку «использует»: это данные для следующего skill. Собирать нужно, оценивать нельзя. «`SessionService` использует Redis для хранения сессий» — факт в карте. «`SessionService` напрямую зависит от Redis» — finding, которого в этом отчёте нет.
 

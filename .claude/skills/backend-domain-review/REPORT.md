@@ -57,7 +57,9 @@ Not evaluated:
   Owner: `backend-architecture-review`
 - dependency direction, coupling, leakage, abstractions
   Owner: `backend-dependency-review`
-- SQL, API design, security, error handling, tests, performance
+- transactions, concurrency, constraints, query cost, migrations
+  Owner: `backend-persistence-review`
+- API design, security, error handling, tests
   Owner: not assigned yet
 
 ## Domain summary
@@ -150,5 +152,5 @@ backend-architecture-review»; «`transfer.ts:52` — нарушение CHECK �
   или чистая функция над структурой.
 - **Trade-offs:** обязательный вызов, который легко обойти новой записью;
   дешевле, чем закрывать поле, но при третьем канале записи стоит добавить
-  constraint в схему (Вне scope: SQL, владелец не назначен).
+  constraint в схему (Вне scope: backend-persistence-review).
 ```

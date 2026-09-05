@@ -51,7 +51,9 @@ Not evaluated:
   Owner: `backend-dependency-review`
 - business rules: bypass paths, duplication, state transitions
   Owner: `backend-domain-review`
-- SQL, performance, security, error handling, tests, naming
+- transactions, concurrency, constraints, query cost, migrations
+  Owner: `backend-persistence-review`
+- security, error handling, tests, naming
   Owner: not assigned yet
 
 ## Architecture summary
@@ -92,7 +94,9 @@ application/business logic и infrastructure, какой компонент чт
 Одна строка на замеченное, с именем skill-владельца:
 «`src/orders/order.service.ts:12` — после переноса транзакции сервис будет
 использовать Prisma напрямую; оценка стрелки — backend-dependency-review».
-«`x.ts:12` — SQL-строка склеивается вручную — владелец не назначен».
+«`reserve.ts:12` — остаток обновляется вне транзакции заказа —
+backend-persistence-review»; «`x.ts:12` — SQL-строка склеивается вручную —
+security, владелец не назначен».
 ```
 
 ## Пример заполненного finding
