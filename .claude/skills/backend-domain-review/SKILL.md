@@ -1,6 +1,6 @@
 ---
 name: backend-domain-review
-description: Review how backend code represents and protects business rules — находит business invariants, которые можно нарушить через существующий code path в обход проверки, business rules, продублированные в независимых местах, недопустимые state transitions, достижимые из кода, и domain concepts, представленные primitive так, что invariant легко нарушить. Не требует DDD, domain layer или конкретного framework: правило оценивается по тому, кто им владеет и можно ли его обойти. Третий шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен domain review, проверка business rules или invariants, вопрос «где живёт это правило, кто его защищает и можно ли его обойти», либо domain-проход внутри многоагентного code review. Do not evaluate placement of work — это backend-architecture-review; dependency direction, coupling, leakage, abstractions — это backend-dependency-review; transactions, concurrency, constraints хранилища, query cost, migrations — это backend-persistence-review; не покрывает API design, security, error handling, тесты.
+description: Review how backend code represents and protects business rules — находит business invariants, которые можно нарушить через существующий code path в обход проверки, business rules, продублированные в независимых местах, недопустимые state transitions, достижимые из кода, и domain concepts, представленные primitive так, что invariant легко нарушить. Третий шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен domain review, проверка business rules или invariants, вопрос «где живёт это правило, кто его защищает и можно ли его обойти», либо domain-проход внутри многоагентного code review. Do not evaluate placement of work — это backend-architecture-review; dependency direction, coupling, leakage, abstractions — это backend-dependency-review; transactions, concurrency, constraints хранилища, query cost, migrations — это backend-persistence-review; не покрывает API design, security, error handling, тесты.
 ---
 
 # Backend domain review
@@ -29,7 +29,7 @@ description: Review how backend code represents and protects business rules — 
 - leakage типов и ошибок через границы, в том числе persistence-тип в domain-сигнатуре;
 - нужен ли contract, port, adapter, dependency inversion.
 
-Владелец — `backend-persistence-review`: transaction boundaries и atomicity, concurrency, constraints хранилища, стоимость запросов, idempotency записей, совместимость миграций.
+Владелец — `backend-persistence-review`: transaction boundaries и atomicity, concurrency, constraints хранилища, стоимость запросов, idempotency записей, совместимость миграций, mapping смысла значения между хранилищем и приложением, side effects при rollback.
 
 HTTP/API design, механика authentication и authorization (роли, токены, scopes, кто может вызвать endpoint), error handling, тесты, performance вне persistence — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
@@ -37,7 +37,7 @@ HTTP/API design, механика authentication и authorization (роли, т�
 
 **Правило разделения с dependency-review:** тип меняется, чтобы компонент перестал знать технологию или другой компонент — dependency-review; тип меняется, чтобы недопустимое значение нельзя было построить — здесь.
 
-**Правило разделения с persistence-review:** здесь — есть ли правило и проходит ли через него каждый путь; там — держит ли хранилище правило, когда все пути через него проходят, но операции выполняются параллельно, повторно или частично. Один путь не проверяет — здесь. Все проверяют, а два параллельных вызова проходят проверку по одному снимку — там.
+**Правило разделения с persistence-review:** здесь — есть ли правило и проходит ли через него каждый путь; там — держит ли хранилище правило, когда все пути через него проходят, но операции выполняются параллельно, повторно или частично. Один путь не проверяет — здесь. Все проверяют, а два параллельных вызова проходят проверку по одному снимку — там. Значение в хранилище и в приложении означает разное (`NULL`, default, кодировка) — там.
 
 Примеры на границе:
 
@@ -46,6 +46,7 @@ HTTP/API design, механика authentication и authorization (роли, т�
 - application-сценарий возвращает тип ORM — **не здесь**: dependency-review.
 - `amount` хранится как число, и три consumers каждый сам проверяют `amount > 0` — **здесь**: правило размазано по consumers из-за представления concept.
 - `status` хранится строкой, но все переходы идут через одну функцию с таблицей допустимых переходов — **не finding**: primitive без обхода; запись в Protected invariants.
+- часть чтений возвращает soft-deleted записи, потому что одно место пишет `NULL`, а другое читает его как `false` — **не здесь**: расхождение представления, persistence-review. Расходится сам предикат «что считать удалённым» — **здесь**: дублирование правила.
 - handler проверяет роль вызывающего, сценарий проверяет, что отменяет владелец заказа и заказ не отправлен — **не дублирование**: первое — authorization (владелец не назначен), второе — бизнес-правило, здесь.
 
 Всё замеченное вне scope — одной строкой в разделе «Вне scope» с именем skill-владельца.

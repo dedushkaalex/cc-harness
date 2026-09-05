@@ -6,7 +6,7 @@
 
 - Persistence summary — не больше 15 операций и 15 constraints; дальше группируй по механизму и отбирай операции про деньги, необратимые действия и данные, на которые опираются другие записи.
 - Findings — не больше 10. Остальное — одним P3 «прочие места того же типа» со списком файл:строка.
-- Один сценарий — один finding: race, из-за которого нужен constraint, не записывается дважды как «concurrency» и «constraint».
+- Один сценарий — один finding: race, из-за которого нужен constraint, не записывается дважды как «concurrency» и «constraint»; запись без условия, уязвимая и к параллельному, и к повторному выполнению, — один finding, а не «concurrency» плюс «idempotency».
 - «Вне scope» — не больше одной строки на категорию.
 
 ## Severity
@@ -36,7 +36,7 @@ Code under review: `src/billing/**` + прямые вызовы (diff PR #57 п�
 по графу вызовов). Входы, ведущие к записи `accounts.balance`, искались по
 всему репозиторию.
 
-Input: Architecture summary, Dependency summary, Domain summary из отчётов
+Input: Architecture summary, Dependency map, Domain summary из отчётов
 предыдущих skills (или «отсутствуют, persistence model построена с нуля»).
 
 Context (из отчёта architecture-review, дособрано: deployment, повторы, объёмы):

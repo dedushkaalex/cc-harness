@@ -57,7 +57,8 @@ Not evaluated:
   Owner: `backend-architecture-review`
 - dependency direction, coupling, leakage, abstractions
   Owner: `backend-dependency-review`
-- transactions, concurrency, constraints, query cost, migrations
+- transactions, concurrency, constraints, query cost, migrations,
+  mapping, side effects at rollback
   Owner: `backend-persistence-review`
 - API design, security, error handling, tests
   Owner: not assigned yet

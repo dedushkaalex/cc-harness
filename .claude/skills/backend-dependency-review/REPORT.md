@@ -58,7 +58,8 @@ Not evaluated:
   Owner: `backend-architecture-review`
 - business rules: bypass paths, duplication, state transitions
   Owner: `backend-domain-review`
-- transactions, concurrency, constraints, query cost, migrations
+- transactions, concurrency, constraints, query cost, migrations,
+  mapping, side effects at rollback
   Owner: `backend-persistence-review`
 - security, error handling, tests
   Owner: not assigned yet
