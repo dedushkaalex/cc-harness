@@ -40,6 +40,8 @@ Context (из отчёта architecture-review, дособрано: тестов
 - один transport (HTTP) — README, docker-compose
 - замена Redis: не известно, в источниках нет
 - тесты подменяют зависимости тестовыми Layer — `test/layers/*.ts`
+- базовая единица: `Context.Tag` + Layer — источник: так объявлены все
+  сервисы в `src/`; тесты подменяют через `test/layers/*.ts`
 
 Mismatches with input model:
 - `UserService`: в отчёте application, в коде импортирует `ioredis` и сам
