@@ -1,6 +1,6 @@
 ---
 name: backend-dependency-review
-description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние interface/port/adapter. Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
+description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние interface/port/adapter (в Effect — лишние Tag и Layer). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
 ---
 
 # Backend dependency review
@@ -9,9 +9,9 @@ description: Review relationships between backend components — находит 
 
 > Что этот компонент знает о других компонентах, и какое изменение из-за этого станет дорогим?
 
-**Finding принадлежит этому skill**, когда проблема вызвана тем, что компонент знает о другом компоненте или implementation detail, импортирует его, выставляет наружу его типы или зависит от него дорогим способом: четыре сервиса знают формат ключей Redis, application service возвращает Prisma-тип, два модуля инжектят друг друга через `forwardRef`.
+**Finding принадлежит этому skill**, когда проблема вызвана тем, что компонент знает о другом компоненте или implementation detail, импортирует его, выставляет наружу его типы или зависит от него дорогим способом: четыре сервиса знают формат ключей Redis, application-эффект возвращает Prisma-тип, два Layer требуют друг друга.
 
-**Исправления** в этом skill меняют импорты, типы, направление стрелки, abstraction или dependency boundary: передать данные параметром, выделить модуль, который один знает технологию, ввести или убрать interface, перевернуть стрелку. Проверка: если исправление — перенести код в другой компонент, finding не отсюда.
+**Исправления** в этом skill меняют импорты, типы, направление стрелки, abstraction или dependency boundary: передать данные параметром, выделить модуль, который один знает технологию, ввести или убрать Tag / interface, перевернуть стрелку. Проверка: если исправление — перенести код в другой компонент, finding не отсюда.
 
 ## Do NOT evaluate
 
@@ -20,15 +20,17 @@ description: Review relationships between backend components — находит 
 - лежит ли в компоненте не тот вид работы;
 - принадлежит ли ответственность другому компоненту;
 - не слишком ли много видов работы в одном компоненте;
-- слой компонента: карта из отчёта architecture-review не переопределяется, этот skill работает со стрелками от уже названных компонентов.
+- слой компонента: с отчётом architecture-review на входе слой берётся из его таблицы и не вычисляется заново.
 
-SQL, индексы, database queries, performance, security, auth, error handling, тесты, naming, folder structure, domain invariants и корректность бизнес-правил — другие skills.
+SQL, индексы, database queries, performance, security, auth, корректность error handling (потеря контекста, проглоченные ошибки, retry), тесты, naming, folder structure, domain invariants — другие skills; полный список владельцев — в ownership matrix в README репозитория skills.
 
 Примеры на границе:
 
-- application service возвращает тип `Prisma.UserGetPayload` — **здесь**: код на месте, чужой только тип.
+- application-эффект возвращает тип `Prisma.UserGetPayload` — **здесь**: код на месте, чужой только тип.
 - controller, внутри которого написана транзакция и запись в две таблицы — **не здесь**: это код persistence в transport, finding architecture-review. Здесь оценивается стрелка, которая останется после переноса кода.
-- два сервиса инжектят друг друга через `forwardRef` — **здесь**: цикл.
+- класс с `@Entity` и бизнес-правилами внутри — **не здесь**: смешение видов работы, владелец architecture-review. Здесь — только стрелка `Domain → ORM` у того, что останется после выноса правил.
+- `QueryFailedError` из persistence виден в канале `E` application-эффекта — **здесь**: тип ошибки нижнего слоя знает верхний. Правильно ли ошибка обрабатывается — не здесь.
+- два Layer требуют друг друга или два сервиса инжектят друг друга через `forwardRef` — **здесь**: цикл.
 
 Всё замеченное вне scope — одной строкой в разделе «Вне scope» с именем skill-владельца.
 
@@ -36,26 +38,40 @@ SQL, индексы, database queries, performance, security, auth, error handli
 
 > Какое изменение станет сложнее из-за этой зависимости?
 
-Не спрашивай «нарушает ли это Dependency Inversion Principle». Dependency не плохая только потому, что существует. `Application → Redis` — повод для оценки, не finding. Finding появляется, когда есть конкретный ответ: «смена схемы ключей Redis потребует править четыре application service». Interface, port, adapter — возможный ответ на уже найденную проблему, а не то, что ты ищешь. Не предполагай заранее Clean, Hexagonal или другую методологию: восстанавливай связи из кода.
+Не спрашивай «нарушает ли это Dependency Inversion Principle». Dependency не плохая только потому, что существует. `Application → Redis` — повод для оценки, не finding. Finding появляется, когда есть конкретный ответ: «смена схемы ключей Redis потребует править четыре application service». Tag, interface, port, adapter — возможный ответ на уже найденную проблему, а не то, что ты ищешь. Не предполагай заранее Clean, Hexagonal или другую методологию: восстанавливай связи из кода.
+
+## Вход
+
+С отчётом `backend-architecture-review` на входе:
+
+- его таблица компонентов — **исходная модель**: имена, слои и колонка «использует» берутся оттуда, компоненты заново не классифицируются;
+- его блок Context — источник сведений о планах; заново собирать только то, чего там нет;
+- проверяется по коду только то, что нужно для dependency analysis: стрелки, типы в сигнатурах, требования Layer;
+- противоречие с моделью не переписывается молча, а записывается в раздел Mismatches блока Scope; стрелки считаются по модели из отчёта.
+
+Без отчёта — Step 0 и классификация слоёв выполняются самостоятельно по правилам из STEPS.md, и в блоке Scope это указано.
 
 ## Порядок работы
 
 Вопросы для каждого шага — в [STEPS.md](STEPS.md), оценка abstraction в обе стороны — в [INVERSION.md](INVERSION.md). Шаг закрыт, когда выполнен его критерий.
 
-- [ ] **Step 1 — Reconstruct dependency graph.** Если есть отчёт `backend-architecture-review`, его Architecture summary — начальная модель компонентов. Проверь её по коду и дополни только теми компонентами и стрелками, которые нужны для dependency analysis; предыдущий агент мог что-то пропустить. Стрелки, которые исчезнут после переноса кода из findings того отчёта, не оценивай — оценивай стрелку, которая появится после переноса. Без отчёта восстанови стрелки `A → B` из импортов, конструкторов, DI-регистраций и глобальных объектов. Критерий: список стрелок, у каждой указан слой обеих сторон (transport / application / domain / infrastructure / persistence / external service) и файл, где стрелка видна.
+- [ ] **Step 0 — Code under review и контекст.** Взять из отчёта architecture-review или собрать по STEPS.md. Критерий: в блоке Scope названы граница кода под ревью и список «известно / не известно» с источниками.
+- [ ] **Step 1 — Reconstruct dependency graph.** По исходной модели или с нуля. Стрелки, которые исчезнут после переноса кода из findings architecture-review, не оцениваются; оценивается стрелка после переноса, помеченная как условная. Критерий: список стрелок `A → B`, у каждой слой обеих сторон из таблицы и файл, где стрелка видна; условные стрелки помечены.
 - [ ] **Step 2 — Direction.** Для каждой подозрительной стрелки определи consumer, dependency, причину существования и природу цели: business concept или implementation detail. Критерий: у каждой подозрительной стрелки все четыре ответа записаны.
 - [ ] **Step 3 — Leakage.** Найди места, где деталь одного компонента или слоя видна в другом. Критерий: для каждой протечки названы что протекло, через какую границу, какое изменение стало дороже, файл и строка.
 - [ ] **Step 4 — Coupling.** Для каждой существенной стрелки оцени шесть параметров из STEPS.md. Критерий: у каждой стрелки вердикт «дорого / приемлемо в этом контексте» с одной фразой почему.
-- [ ] **Step 5 — Dependency inversion.** Для стрелок с вердиктом «дорого» ответь на пять вопросов из INVERSION.md, прежде чем предлагать interface или port. Критерий: у каждой рекомендации названы решаемая проблема, локализуемые изменения, добавляемая complexity, существующая похожая abstraction, нужна ли граница вообще.
-- [ ] **Step 6 — Cycles.** Найди циклы `A → B → A` на уровне модулей и компонентов. Критерий: у каждого цикла есть оценка влияния по пяти признакам из STEPS.md; цикл без реального влияния — не finding.
+- [ ] **Step 5 — Dependency inversion.** Для стрелок с вердиктом «дорого» ответь на пять вопросов из INVERSION.md, прежде чем предлагать Tag, interface или port. Критерий: у каждой рекомендации названы решаемая проблема, локализуемые изменения, добавляемая complexity, существующая похожая abstraction, нужна ли граница вообще.
+- [ ] **Step 6 — Cycles.** Найди циклы `A → B → A` на уровне модулей, компонентов и Layer. Критерий: у каждого цикла есть оценка влияния по пяти признакам из STEPS.md; цикл без реального влияния — не finding.
 - [ ] **Step 7 — Stable vs volatile.** Для каждого finding подтверди, что изменчивая сторона — именно dependency, а не consumer. Критерий: finding, где цель стабильна (standard library, устоявшийся внутренний контракт), понижен или убран с объяснением.
-- [ ] **Overengineering pass.** Пройди все interface, port, adapter, фабрики и слои-прослойки по критериям из INVERSION.md. Критерий: у каждой abstraction вердикт «оправдана / лишняя» с причиной.
+- [ ] **Overengineering pass.** Пройди все Tag, Layer, interface, port, adapter, фабрики и слои-прослойки по критериям из INVERSION.md. Критерий: у каждой abstraction вердикт «оправдана / лишняя» с причиной.
 - [ ] **Отчёт** по шаблону из [REPORT.md](REPORT.md), с блоком Scope.
 
 ## Правила для findings
 
 - Каждый finding опирается на конкретный код: путь к файлу и строка. Без evidence finding не существует.
+- **Условный finding** — про стрелку, которая появится после переноса кода из finding architecture-review. Помечается «при условии применения [P2] architecture-review», evidence записывается как «`order.controller.ts:31-58` → переносится в `OrderService`». Если рекомендацию architecture-review отклонят, условный finding снимается вместе с ней.
 - У каждого finding есть **change scenario** — конкретное изменение, которое стало дорогим: «заменить Redis на Memcached», «добавить второй transport», «сменить ORM». Без сценария это architectural preference, а не finding.
+- У каждого finding есть **Confidence** — high / medium / low — с основанием из Context. Вердикт «замена не планируется» или «второго consumer не видно в планах» без источника получает не выше medium.
 - Severity — по стоимости изменений. P1 — coupling или cycle, который реально ограничивает изменения. P2 — заметно дороже maintainability или implementation details протекают между важными boundaries. P3 — зависит от будущего развития системы. Подробнее — в REPORT.md.
 - Не предлагай dependency inversion ради dependency inversion. Если после оценки abstraction не нужна, так и напиши и назови, при каком изменении контекста вердикт поменяется.
 - Рекомендация не выходит за границу skill: «перенести код в другой компонент» — не отсюда, это уходит в «Вне scope».

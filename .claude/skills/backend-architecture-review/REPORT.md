@@ -2,6 +2,12 @@
 
 Справочник к последнему шагу из [SKILL.md](SKILL.md). Блок Scope, затем три раздела в этом порядке плюс «Вне scope»; пустой раздел остаётся с пометкой «не найдено», чтобы читатель знал, что проход был. Блок Scope обязателен: следующий агент в pipeline должен видеть не «этого не проверяли», а кто обязан это проверить.
 
+## Лимиты
+
+- Таблица компонентов — только код под ревью из Step 0, не больше 25 строк. Больше — группируй по модулям и укажи, что строка означает модуль.
+- Findings — не больше 10. Остальное — одним P3 «прочие места того же типа» со списком файл:строка.
+- «Вне scope» — не больше одной строки на категорию; повторы одной категории объединяются.
+
 ## Severity
 
 | Уровень | Когда | Пример |
@@ -12,10 +18,26 @@
 
 Стилистическое предпочтение («я бы назвал слой иначе», «мне ближе другая структура папок») — не finding. Максимум P3, и только если можно назвать изменение, которое станет дороже.
 
+## Confidence
+
+| Уровень | Когда |
+|---|---|
+| **high** | evidence в коде однозначно, контекст из Step 0 подтверждает change scenario или не нужен |
+| **medium** | evidence однозначно, но вердикт опирается на допущение о планах, которого в источниках нет |
+| **low** | evidence косвенное (код читается двояко) или допущений больше одного |
+
 ## Структура
 
 ```markdown
 ## Scope
+
+Code under review: `src/orders/**` + прямые вызовы из `src/http/order.controller.ts`
+(diff PR #42 плюс один шаг по графу вызовов).
+
+Context:
+- один transport (HTTP) — README, docker-compose
+- очередь для импорта заказов в планах — ADR-0007
+- второе хранилище: не известно, в источниках нет
 
 Evaluated:
 - responsibilities: какие виды работы выполняет каждый компонент
@@ -25,7 +47,7 @@ Not evaluated:
 - dependency direction, coupling, leakage, cycles, abstractions
   Owner: `backend-dependency-review`
 - SQL, performance, security, error handling, tests, naming
-  Owner: соответствующие skills
+  Owner: см. ownership matrix
 
 ## Architecture summary
 
@@ -35,8 +57,8 @@ application/business logic и infrastructure, какой компонент чт
 использования («`SessionService` использует Redis для сессий») здесь
 фиксируются, но не оцениваются.
 
-Таблица компонентов из Step 1 — целиком: это входная модель для
-`backend-dependency-review`.
+Таблица компонентов из Step 1 для кода под ревью (лимит 25 строк): это
+входная модель для `backend-dependency-review`.
 
 ## Findings
 
@@ -47,6 +69,8 @@ application/business logic и infrastructure, какой компонент чт
 - **Evidence:** `path/to/file.ts:42` — что именно там видно; при необходимости
   ещё одно–два места.
 - **Why it matters:** какое изменение станет дорогим и почему.
+- **Confidence:** high / medium / low — на чём держится: источник из
+  Context или допущение.
 - **Suggested solution:** куда переносится код; без новых abstraction.
 - **Trade-offs:** что становится хуже после переноса; когда лучше оставить
   как есть.
@@ -63,7 +87,7 @@ application/business logic и infrastructure, какой компонент чт
 Одна строка на замеченное, с именем skill-владельца:
 «`src/orders/order.service.ts:12` — после переноса транзакции сервис будет
 использовать Prisma напрямую; оценка стрелки — backend-dependency-review».
-«`x.ts:12` — SQL-строка склеивается вручную — security/SQL review».
+«`x.ts:12` — SQL-строка склеивается вручную — владелец по ownership matrix».
 ```
 
 ## Пример заполненного finding
@@ -78,6 +102,8 @@ application/business logic и infrastructure, какой компонент чт
   для расчёта суммы.
 - **Why it matters:** добавить второй transport (очередь для импорта
   заказов) нельзя без копирования транзакционной логики.
+- **Confidence:** high — очередь для импорта записана в ADR-0007, сценарий
+  не гипотетический.
 - **Suggested solution:** перенести транзакцию и запись в
   `OrderService.create`, оставить controller только разбор запроса
   и вызов сервиса.
