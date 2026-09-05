@@ -8,7 +8,7 @@
 
 **Без отчёта** — определи код под ревью сам: diff или названные файлы плюс один шаг по графу зависимостей; модуль целиком плюс один шаг наружу; весь репозиторий — только если сказано явно, тогда стрелки считаются между модулями, а не классами.
 
-Источники контекста, в порядке надёжности: ADR и `docs/`; README и CLAUDE.md; git log; тесты (что и как подменяется — в Effect это тестовые Layer, в NestJS — override provider, в plain TS — мок модуля); конфиги окружений и docker-compose; `package.json` (подключённые, но не используемые библиотеки — признак начатой миграции). Итог — список «известно / не известно» с источниками. Не ищи дольше одного прохода: нет ответа — «не известно», в finding это допущение с Confidence не выше medium.
+Источники контекста, в порядке надёжности: ADR и `docs/`; README и CLAUDE.md; git log; тесты (что и как подменяется: тестовый Layer, override provider в DI-контейнере, мок модуля, fake через interface или Protocol, `dependency_overrides`, `Mox`, monkeypatch); конфиги окружений и docker-compose; манифест зависимостей (`package.json`, `pyproject.toml`, `go.mod`, `mix.exs`, `Cargo.toml`, `pom.xml`: подключённые, но не используемые библиотеки — признак начатой миграции). Итог — список «известно / не известно» с источниками. Не ищи дольше одного прохода: нет ответа — «не известно», в finding это допущение с Confidence не выше medium.
 
 ## Step 1 — Reconstruct dependency graph
 
@@ -19,7 +19,7 @@
 Дальше три действия, и только они:
 
 1. **Verify.** У каждой строки «использует» найди файл и строку, где стрелка видна. Предыдущий агент мог что-то пропустить или ошибиться.
-2. **Add missing arrows.** Дополни модель только тем, что нужно для dependency analysis и чего в таблице нет: импорты типов, требования Layer, ошибки в канале `E`, декораторы, наследование. Карта целиком не перестраивается.
+2. **Add missing arrows.** Дополни модель только тем, что нужно для dependency analysis и чего в таблице нет: импорты типов, объявленные требования, типы ошибок в сигнатурах, аннотации и декораторы, наследование. Карта целиком не перестраивается.
 3. **Report mismatches.** Если код противоречит модели — компонент назван application, а внутри он собирает ключи Redis и импортирует `ioredis` — модель не переписывается. Противоречие записывается в раздел Mismatches блока Scope с владельцем `backend-architecture-review`, а стрелки считаются по модели из отчёта. Так у двух отчётов остаётся одна система координат, и видно, где она трещит.
 
 **Стрелки после переноса кода.** Оба skill смотрят на один и тот же код. Если первый отчёт предлагает перенести транзакцию из `OrderController` в `OrderService`, стрелка `OrderController → Prisma` исчезнет вместе с переносом — её не оценивай, иначе получится второй finding про ту же строку. Оценивай стрелку, которая появится после переноса: `OrderService → Prisma`. Такая стрелка помечается как условная, evidence записывается «`order.controller.ts:31-58` → переносится в `OrderService`», в finding — «при условии применения [P2] architecture-review».
@@ -28,14 +28,14 @@
 
 Восстанови компоненты и стрелки с нуля. Название папки `domain/` или `ports/` ничего не доказывает: стрелка существует там, где один файл получает другой.
 
-Где искать стрелки:
+Стрелка существует везде, где один компонент получает другой **любым способом**. Механизм зависит от стека, стрелка — нет. Где искать:
 
-- **Канал `R` эффектов** (Effect) — `Effect<A, E, R>`: всё, что в `R` у экспортируемого эффекта, это его зависимости, и они видны без чтения тела. `Layer<Out, E, In>` — стрелка от `Out` к каждому `In`.
-- **Канал `E` эффектов** — тип ошибки в сигнатуре: если там `SqlError` или `RedisError`, consumer знает тип ошибки нижнего слоя.
-- **Импорты** — импорт типа тоже считается: `import type { Prisma } from '@prisma/client'` в application — это стрелка `Application → Prisma`.
-- **Конструкторы и DI** — что инжектится, конкретный класс или контракт; в NestJS — `providers`, `imports`, `exports` модулей.
-- **Глобальные объекты и singletons** — `process.env`, глобальный клиент БД, статические методы.
-- **Декораторы и наследование** — `@Entity`, `@Injectable`, базовый класс из ORM или framework.
+- **Объявленные требования** — зависимости, видимые в сигнатуре без чтения тела: в Effect канал `R` у `Effect<A, E, R>` и входы `Layer<Out, E, In>` (стрелка от `Out` к каждому `In`); trait bound в Rust; `Depends()` в FastAPI.
+- **Типы ошибок в сигнатуре или обработке** — если в канале `E`, в `Result<_, SqlxError>`, в `except IntegrityError` или в `catch` виден `SqlError` или `RedisError`, consumer знает тип ошибки нижнего слоя.
+- **Импорты** — ссылка только на уровне типов тоже считается: `import type { Prisma } from '@prisma/client'` в application — это стрелка `Application → Prisma`; то же для импорта под `TYPE_CHECKING` в Python или типа в сигнатуре Go.
+- **Параметры конструкторов и функций** — что передаётся: конкретный клиент или contract; в DI-контейнере — что зарегистрировано и экспортировано (в NestJS `providers`, `imports`, `exports` модулей).
+- **Глобальные объекты, конфигурация и singletons** — `process.env`, application config, глобальный клиент БД, статические методы, module attributes.
+- **Аннотации, декораторы, макросы и наследование** — `@Entity`, `@Injectable`, `use Ecto.Schema`, derive-макросы, базовый класс из ORM или framework.
 
 Слой определяй по тому, с чем компонент работает напрямую, ровно шесть значений, те же, что у architecture-review: transport — HTTP/gRPC/queue handlers и DTO; application — сценарии и оркестрация; domain — правила без I/O; infrastructure — кэш, очереди, файлы, framework, конфигурация; persistence — БД, ORM, repository; external service — SDK и клиенты сторонних API.
 
@@ -58,9 +58,9 @@ OrderService (application) → Prisma (persistence)          условная: o
 Domain → Framework
 Domain → ORM
 Domain → Database
-Domain → Redis
+Domain → cache / queue client
 Domain → Transport DTO
-Application → concrete infrastructure (клиент, SDK, драйвер, а не Tag/контракт)
+Application → concrete infrastructure (клиент, SDK, драйвер, а не contract)
 Transport → Persistence в обход application
 Модуль → implementation detail другого модуля (его таблица, формат кэша, приватный тип)
 ```
@@ -72,7 +72,7 @@ Transport → Persistence в обход application
 3. **Почему стрелка существует** — что consumer получает: данные, побочный эффект, тип, поведение.
 4. **Business concept или implementation detail** — зависит ли consumer от *того, что* делает цель («сохранить сессию») или от *того, как* она это делает (ключ `session:{id}`, TTL в секундах, pipeline).
 
-В Effect стрелка к Tag — это стрелка к контракту, а не к реализации: `R = SessionStore` не говорит, что за ним Redis. Стрелка становится подозрительной, когда в `R` стоит сам `Redis`-Tag или в сигнатуре видны его типы.
+Стрелка к contract — это стрелка к контракту, а не к реализации: `R = SessionStore` в Effect, параметр типа `SessionStore` interface в Go, trait bound `S: SessionStore` в Rust не говорят, что за ними Redis. Стрелка становится подозрительной, когда в требовании или сигнатуре стоит сам клиент (`Redis`-Tag, `*redis.Client`, `Redis` из ioredis) или видны его типы.
 
 Стрелка `Domain → ORM` не становится finding автоматически. Если domain-тип — это ORM entity, у проекта нет отдельного domain слоя и никто не планирует его вводить (Context), это архитектурное решение проекта, а не протечка. Finding появится, когда назовёшь изменение, которое из-за этого стало дорогим.
 
@@ -82,11 +82,11 @@ Transport → Persistence в обход application
 
 | Что протекло | Через какую границу | Как выглядит в коде |
 |---|---|---|
-| Типы ORM (Prisma, TypeORM entity, QueryBuilder) | persistence → application или transport | application-эффект возвращает `Prisma.UserGetPayload`; handler отдаёт entity как response |
-| Redis-специфичные типы и concepts | infrastructure → application | сервис оперирует ключами, TTL, `pipeline`, `Buffer` из ioredis |
-| HTTP DTO | transport → application или domain | `CreateOrderDto` с транспортными аннотациями принимается domain-функцией |
-| Декораторы и типы framework | framework → domain | domain-класс помечен `@Injectable`, импортирует `Request` из express |
-| Тип ошибки нижнего слоя | persistence / infrastructure → application или transport | `SqlError`, `RedisError`, `AxiosError` в канале `E` application-эффекта или в `catch` handler'а |
+| Persistence representation types: ORM entity, query builder, сгенерированная структура | persistence → application или transport | application-сценарий возвращает `Prisma.UserGetPayload` или `%User{}` из `Ecto.Schema`; handler отдаёт entity или `sqlc`-структуру как response |
+| Store-specific concepts: ключи, TTL, pipeline, буферы клиента кэша или очереди | infrastructure → application | сервис оперирует ключами, TTL, `pipeline`, `Buffer` из ioredis; сценарий знает имя очереди и формат сообщения |
+| HTTP DTO | transport → application или domain | `CreateOrderDto` с транспортными аннотациями принимается domain-функцией; domain-функция принимает `*http.Request` |
+| Framework annotations, macros и базовые типы | framework → domain | domain-класс помечен `@Injectable`, импортирует `Request` из express; domain-модуль делает `use Phoenix.Controller` |
+| Тип ошибки нижнего слоя | persistence / infrastructure → application или transport | `SqlError`, `RedisError`, `AxiosError` в объявленном типе ошибки application-сценария (канал `E`, `Result`) или в `catch` / `except` / `match` handler'а |
 | Формат внешнего API | external service → application | сценарий разбирает JSON стороннего API по его полям |
 
 Случай «правила предметной области живут в классе с `@Entity`» сюда **не** входит: это смешение видов работы, владелец `backend-architecture-review`. Здесь оценивается только стрелка `Domain → ORM` у того, что останется после выноса правил.
@@ -95,11 +95,11 @@ Transport → Persistence в обход application
 
 1. **Что именно протекло** — конкретный тип, ошибка, формат.
 2. **Через какую границу** — из какого слоя в какой.
-3. **Какие изменения теперь дороже** — смена ORM правит handler; новая версия внешнего API правит сценарий; замена Redis ломает сигнатуры application-эффектов.
+3. **Какие изменения теперь дороже** — смена ORM правит handler; новая версия внешнего API правит сценарий; замена Redis ломает сигнатуры application-сценариев.
 
 Плюс файл и строка. Отдельно отметь границы, которые **уже держатся** — repository возвращает свои типы, а не entity; ошибки нижнего слоя оборачиваются на границе в ошибки application. Они пойдут в раздел «Good dependencies».
 
-Ошибки как канал протечки — не тема error handling. Здесь вопрос только один: **знает ли верхний слой тип ошибки нижнего**. Теряется ли контекст, проглатывается ли ошибка, правильно ли сделан retry — владелец error-handling review по ownership matrix.
+Ошибки как канал протечки — не тема error handling. Здесь вопрос только один: **знает ли верхний слой тип ошибки нижнего**. Теряется ли контекст, проглатывается ли ошибка, правильно ли сделан retry — владелец error-handling review, когда появится; пока в «Вне scope» с пометкой «владелец не назначен».
 
 ## Step 4 — Coupling
 
@@ -107,10 +107,10 @@ Transport → Persistence в обход application
 
 | Параметр | Дёшево | Дорого |
 |---|---|---|
-| **Знание о concrete implementation** | consumer вызывает метод контракта или Tag | consumer знает SDK, формат ключей, схему таблицы, коды ошибок |
+| **Знание о concrete implementation** | consumer вызывает операцию contract | consumer знает SDK, формат ключей, схему таблицы, коды ошибок |
 | **Число consumers** | один компонент рядом с целью | несколько модулей в разных частях системы |
-| **Стоимость замены** | замена — правка одного файла или одного Layer | правки разбросаны, и найти их можно только поиском по импортам |
-| **Распространение типов и concepts** | типы цели не выходят за пределы одного компонента | типы цели в сигнатурах, DTO, ответах API, каналах `E` и `R` |
+| **Стоимость замены** | замена — правка одного файла или одного adapter | правки разбросаны, и найти их можно только поиском по импортам |
+| **Распространение типов и concepts** | типы цели не выходят за пределы одного компонента | типы цели в публичных сигнатурах: результат, тип ошибки, объявленные требования, DTO, ответы API |
 | **Stable или volatile** | standard library, устоявшийся внутренний контракт | конкретная инфраструктурная технология, внешний API, SDK с частыми breaking changes |
 | **Contract или implementation detail** | стрелка ведёт к business/application contract | стрелка ведёт к тому, как контракт реализован |
 
@@ -121,7 +121,7 @@ Transport → Persistence в обход application
 - Один сервис, вызовы `get` и `set`, Redis-типы наружу не выходят, замена не планируется (Context: README, один compose) — **приемлемо**. Обёртка добавит файл и переход без выгоды.
 - Четыре сервиса знают формат ключей `session:{userId}:{jti}`, TTL и `pipeline` — **дорого**. Смена схемы ключей или переход на другое хранилище потребует править четыре места. Кандидат в P1/P2, дальше — Step 5.
 
-Некоторое coupling естественно и полезно: application service, который знает свой repository-Tag, handler, который знает свой сервис. Не ищи проблему там, где нет change scenario.
+Некоторое coupling естественно и полезно: application service, который знает contract своего repository, handler, который знает свой сервис. Не ищи проблему там, где нет change scenario.
 
 ## Step 6 — Cycles
 
@@ -132,7 +132,7 @@ A → B → C → A
 Users → Sessions → Users
 ```
 
-Ищи на трёх уровнях: файлы (circular import), компоненты (Layer `A` требует `B`, а `B` требует `A`; в NestJS — два сервиса через `forwardRef`), модули (два модуля импортируют друг друга).
+Ищи на трёх уровнях: файлы (circular import), компоненты (взаимные требования в графе сборки: Layer `A` требует `B`, а `B` — `A`; два сервиса через `forwardRef`; два провайдера DI-контейнера через lazy-инъекцию), модули (два модуля импортируют друг друга).
 
 Технический circular import сам по себе — не finding. Оцени, к чему цикл приводит:
 
@@ -150,6 +150,6 @@ Users → Sessions → Users
 
 > Какая сторона стрелки скорее будет изменяться?
 
-Dependency оправдывает внимание, когда **цель** изменчивее consumer. `Application → Redis`: Redis — конкретная технология, может смениться, стрелка несёт change cost. `Application → standard library`, `Application → собственный устоявшийся value object`, `Application → Tag собственного сервиса` — цель стабильнее consumer, стрелка естественна.
+Dependency оправдывает внимание, когда **цель** изменчивее consumer. `Application → Redis`: Redis — конкретная технология, может смениться, стрелка несёт change cost. `Application → standard library`, `Application → собственный устоявшийся value object`, `Application → contract собственного сервиса` — цель стабильнее consumer, стрелка естественна.
 
 Для каждого finding подтверди, что изменчивая сторона — именно dependency, и назови источник из Context, если вердикт опирается на планы. Если цель стабильна, а finding держится только на «это нарушает направление слоёв», понизь его до P3 или убери и напиши почему. Не применяй dependency inversion механически: переворачивать стрелку к стабильной цели — это добавлять complexity без выгоды.

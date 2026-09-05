@@ -1,6 +1,6 @@
 ---
 name: backend-dependency-review
-description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние interface/port/adapter (в Effect — лишние Tag и Layer). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
+description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние contract / port / adapter (interface, trait, Protocol, behaviour, Effect Tag и Layer). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
 ---
 
 # Backend dependency review
@@ -9,9 +9,11 @@ description: Review relationships between backend components — находит 
 
 > Что этот компонент знает о других компонентах, и какое изменение из-за этого станет дорогим?
 
-**Finding принадлежит этому skill**, когда проблема вызвана тем, что компонент знает о другом компоненте или implementation detail, импортирует его, выставляет наружу его типы или зависит от него дорогим способом: четыре сервиса знают формат ключей Redis, application-эффект возвращает Prisma-тип, два Layer требуют друг друга.
+**Finding принадлежит этому skill**, когда проблема вызвана тем, что компонент знает о другом компоненте или implementation detail, импортирует его, выставляет наружу его типы или зависит от него дорогим способом: четыре сервиса знают формат ключей Redis, application-сценарий возвращает тип ORM (`Prisma.UserGetPayload`, `Ecto.Schema`), два компонента требуют друг друга при сборке.
 
-**Исправления** в этом skill меняют импорты, типы, направление стрелки, abstraction или dependency boundary: передать данные параметром, выделить модуль, который один знает технологию, ввести или убрать Tag / interface, перевернуть стрелку. Проверка: если исправление — перенести код в другой компонент, finding не отсюда.
+**Исправления** в этом skill меняют импорты, типы, направление стрелки, abstraction или dependency boundary: передать данные параметром, выделить модуль, который один знает технологию, ввести или убрать contract, перевернуть стрелку. Проверка: если исправление — перенести код в другой компонент, finding не отсюда.
+
+**Contract** здесь и дальше — любой способ объявить зависимость через её форму, а не реализацию: interface, trait, Protocol, behaviour, Effect `Context.Tag`. **Adapter** — реализация contract, единственное место, которое знает технологию: класс, Layer, модуль. Какой механизм в проекте базовый, определяется на Step 0 по коду и тестам, а не по знакомому стеку.
 
 ## Do NOT evaluate
 
@@ -22,15 +24,15 @@ description: Review relationships between backend components — находит 
 - не слишком ли много видов работы в одном компоненте;
 - слой компонента: с отчётом architecture-review на входе слой берётся из его таблицы и не вычисляется заново.
 
-SQL, индексы, database queries, performance, security, auth, корректность error handling (потеря контекста, проглоченные ошибки, retry), тесты, naming, folder structure, domain invariants — другие skills; полный список владельцев — в ownership matrix в README репозитория skills.
+SQL, индексы, database queries, performance, security, auth, корректность error handling (потеря контекста, проглоченные ошибки, retry), тесты, naming, folder structure, domain invariants — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
 Примеры на границе:
 
-- application-эффект возвращает тип `Prisma.UserGetPayload` — **здесь**: код на месте, чужой только тип.
+- application-сценарий возвращает тип ORM (`Prisma.UserGetPayload`, `Ecto.Schema`, структура из `sqlc`) — **здесь**: код на месте, чужой только тип.
 - controller, внутри которого написана транзакция и запись в две таблицы — **не здесь**: это код persistence в transport, finding architecture-review. Здесь оценивается стрелка, которая останется после переноса кода.
 - класс с `@Entity` и бизнес-правилами внутри — **не здесь**: смешение видов работы, владелец architecture-review. Здесь — только стрелка `Domain → ORM` у того, что останется после выноса правил.
-- `QueryFailedError` из persistence виден в канале `E` application-эффекта — **здесь**: тип ошибки нижнего слоя знает верхний. Правильно ли ошибка обрабатывается — не здесь.
-- два Layer требуют друг друга или два сервиса инжектят друг друга через `forwardRef` — **здесь**: цикл.
+- тип ошибки persistence (`QueryFailedError`, `sqlx::Error`, `IntegrityError`) виден в объявленном типе ошибки или в обработке ошибок application-сценария (канал `E`, `Result`, `catch`, `except`, `match`) — **здесь**: тип ошибки нижнего слоя знает верхний. Правильно ли ошибка обрабатывается — не здесь.
+- два компонента требуют друг друга при сборке (два Layer, два сервиса через `forwardRef`, два пакета с взаимным импортом) — **здесь**: цикл.
 
 Всё замеченное вне scope — одной строкой в разделе «Вне scope» с именем skill-владельца.
 
@@ -38,7 +40,7 @@ SQL, индексы, database queries, performance, security, auth, коррек
 
 > Какое изменение станет сложнее из-за этой зависимости?
 
-Не спрашивай «нарушает ли это Dependency Inversion Principle». Dependency не плохая только потому, что существует. `Application → Redis` — повод для оценки, не finding. Finding появляется, когда есть конкретный ответ: «смена схемы ключей Redis потребует править четыре application service». Tag, interface, port, adapter — возможный ответ на уже найденную проблему, а не то, что ты ищешь. Не предполагай заранее Clean, Hexagonal или другую методологию: восстанавливай связи из кода.
+Не спрашивай «нарушает ли это Dependency Inversion Principle». Dependency не плохая только потому, что существует. `Application → Redis` — повод для оценки, не finding. Finding появляется, когда есть конкретный ответ: «смена схемы ключей Redis потребует править четыре application service». Contract, port, adapter — возможный ответ на уже найденную проблему, а не то, что ты ищешь. Не предполагай заранее Clean, Hexagonal или другую методологию: восстанавливай связи из кода.
 
 ## Вход
 
@@ -46,7 +48,7 @@ SQL, индексы, database queries, performance, security, auth, коррек
 
 - его таблица компонентов — **исходная модель**: имена, слои и колонка «использует» берутся оттуда, компоненты заново не классифицируются;
 - его блок Context — источник сведений о планах; заново собирать только то, чего там нет;
-- проверяется по коду только то, что нужно для dependency analysis: стрелки, типы в сигнатурах, требования Layer;
+- проверяется по коду только то, что нужно для dependency analysis: стрелки, типы в сигнатурах, объявленные требования;
 - противоречие с моделью не переписывается молча, а записывается в раздел Mismatches блока Scope; стрелки считаются по модели из отчёта.
 
 Без отчёта — Step 0 и классификация слоёв выполняются самостоятельно по правилам из STEPS.md, и в блоке Scope это указано.
@@ -60,10 +62,10 @@ SQL, индексы, database queries, performance, security, auth, коррек
 - [ ] **Step 2 — Direction.** Для каждой подозрительной стрелки определи consumer, dependency, причину существования и природу цели: business concept или implementation detail. Критерий: у каждой подозрительной стрелки все четыре ответа записаны.
 - [ ] **Step 3 — Leakage.** Найди места, где деталь одного компонента или слоя видна в другом. Критерий: для каждой протечки названы что протекло, через какую границу, какое изменение стало дороже, файл и строка.
 - [ ] **Step 4 — Coupling.** Для каждой существенной стрелки оцени шесть параметров из STEPS.md. Критерий: у каждой стрелки вердикт «дорого / приемлемо в этом контексте» с одной фразой почему.
-- [ ] **Step 5 — Dependency inversion.** Для стрелок с вердиктом «дорого» ответь на пять вопросов из INVERSION.md, прежде чем предлагать Tag, interface или port. Критерий: у каждой рекомендации названы решаемая проблема, локализуемые изменения, добавляемая complexity, существующая похожая abstraction, нужна ли граница вообще.
-- [ ] **Step 6 — Cycles.** Найди циклы `A → B → A` на уровне модулей, компонентов и Layer. Критерий: у каждого цикла есть оценка влияния по пяти признакам из STEPS.md; цикл без реального влияния — не finding.
+- [ ] **Step 5 — Dependency inversion.** Для стрелок с вердиктом «дорого» ответь на пять вопросов из INVERSION.md, прежде чем предлагать contract или port. Критерий: у каждой рекомендации названы решаемая проблема, локализуемые изменения, добавляемая complexity, существующая похожая abstraction, нужна ли граница вообще.
+- [ ] **Step 6 — Cycles.** Найди циклы `A → B → A` на уровне файлов, компонентов и графа сборки. Критерий: у каждого цикла есть оценка влияния по пяти признакам из STEPS.md; цикл без реального влияния — не finding.
 - [ ] **Step 7 — Stable vs volatile.** Для каждого finding подтверди, что изменчивая сторона — именно dependency, а не consumer. Критерий: finding, где цель стабильна (standard library, устоявшийся внутренний контракт), понижен или убран с объяснением.
-- [ ] **Overengineering pass.** Пройди все Tag, Layer, interface, port, adapter, фабрики и слои-прослойки по критериям из INVERSION.md. Критерий: у каждой abstraction вердикт «оправдана / лишняя» с причиной.
+- [ ] **Overengineering pass.** Пройди все contracts, adapters, port, фабрики и слои-прослойки по критериям из INVERSION.md (в Effect — Tag и Layer поверх базовой пары). Критерий: у каждой abstraction вердикт «оправдана / лишняя» с причиной.
 - [ ] **Отчёт** по шаблону из [REPORT.md](REPORT.md), с блоком Scope.
 
 ## Правила для findings

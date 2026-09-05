@@ -24,9 +24,9 @@ description: Review backend component responsibilities and placement of work —
 - зависимости от конкретного SDK, ORM, драйвера;
 - interface / port / adapter / dependency inversion — нужны они или лишние.
 
-SQL, индексы, performance, security, корректность auth, error handling, тесты, naming, style — другие skills; полный список владельцев — в ownership matrix в README репозитория skills.
+SQL, индексы, performance, security, корректность auth, error handling, тесты, naming, style — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
-Импорты и конструкторные параметры **собираются** на Step 1 в колонку «использует»: это данные для следующего skill. Собирать нужно, оценивать нельзя. «`SessionService` использует Redis для хранения сессий» — факт в карте. «`SessionService` напрямую зависит от Redis» — finding, которого в этом отчёте нет.
+Всё, через что компонент получает другие компоненты (импорты, параметры конструкторов и функций, объявленные требования, глобальные объекты), **собирается** на Step 1 в колонку «использует»: это данные для следующего skill. Собирать нужно, оценивать нельзя. «`SessionService` использует Redis для хранения сессий» — факт в карте. «`SessionService` напрямую зависит от Redis» — finding, которого в этом отчёте нет.
 
 Примеры на границе:
 

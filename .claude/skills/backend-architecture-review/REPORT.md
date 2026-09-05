@@ -47,7 +47,7 @@ Not evaluated:
 - dependency direction, coupling, leakage, cycles, abstractions
   Owner: `backend-dependency-review`
 - SQL, performance, security, error handling, tests, naming
-  Owner: см. ownership matrix
+  Owner: not assigned yet
 
 ## Architecture summary
 
@@ -87,7 +87,7 @@ application/business logic и infrastructure, какой компонент чт
 Одна строка на замеченное, с именем skill-владельца:
 «`src/orders/order.service.ts:12` — после переноса транзакции сервис будет
 использовать Prisma напрямую; оценка стрелки — backend-dependency-review».
-«`x.ts:12` — SQL-строка склеивается вручную — владелец по ownership matrix».
+«`x.ts:12` — SQL-строка склеивается вручную — владелец не назначен».
 ```
 
 ## Пример заполненного finding

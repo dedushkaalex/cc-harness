@@ -13,7 +13,7 @@
 | Уровень | Когда | Пример |
 |---|---|---|
 | **P1** | Dependency создаёт существенный architectural coupling или dependency cycle, который реально ограничивает изменения: замена технологии или правка одного модуля требует правок в нескольких несвязанных местах, либо цикл блокирует тестирование и требует обходов при сборке | пять application services знают формат ключей Redis и его pipeline-команды; два Layer требуют друг друга, тесты поднимают оба |
-| **P2** | Dependency заметно ухудшает maintainability или распространяет implementation details между важными boundaries: изменение возможно, но дороже, чем должно быть | application-эффект возвращает Prisma-тип, и три handler'а зависят от его полей; `SqlError` в канале `E` доходит до transport без преобразования |
+| **P2** | Dependency заметно ухудшает maintainability или распространяет implementation details между важными boundaries: изменение возможно, но дороже, чем должно быть | application-эффект возвращает Prisma-тип, и три handler'а зависят от его полей; `SqlError` из persistence доходит до transport без преобразования, в типе ошибки или в `catch` |
 | **P3** | Потенциальная проблема или improvement, зависящий от будущего развития системы; из кода вердикт не виден | один сервис напрямую использует SDK внешнего API; станет проблемой при втором consumer или смене версии API |
 
 Architectural preference («я бы перевернул эту стрелку», «по Hexagonal здесь должен быть port») — не finding. Максимум P3, и только если можно назвать изменение, которое станет дороже.
@@ -55,7 +55,7 @@ Not evaluated:
 - responsibilities and placement of work
   Owner: `backend-architecture-review`
 - SQL, performance, security, error handling, tests, domain invariants
-  Owner: см. ownership matrix
+  Owner: not assigned yet
 
 ## Dependency map
 
@@ -63,7 +63,7 @@ Not evaluated:
 там, где он не очевиден из имени. Условные стрелки помечены.
 
 Controller → Application Service
-Application Service → SessionStore (Tag)
+Application Service → SessionStore (contract)
 SessionStoreLive → Redis (ioredis)
 OrderService → Prisma            условная: после переноса из [P2] architecture-review
 UsersLayer ⇄ SessionsLayer       cycle
@@ -99,7 +99,7 @@ UsersLayer ⇄ SessionsLayer       cycle
 
 ### Название структуры (`path/to/file.ts:10`)
 
-- **Что это:** Tag поверх Tag / interface / adapter / фабрика / прослойка.
+- **Что это:** contract поверх contract / adapter / фабрика / прослойка.
 - **Почему лишняя:** какие критерии не выполнены (реализаций: 1,
   consumers: 1, замена не планируется, isolation не используется).
 - **Стоимость сейчас:** файлы, переходы, токены.
@@ -110,7 +110,7 @@ UsersLayer ⇄ SessionsLayer       cycle
 Одна строка на замеченное, с именем skill-владельца: «`OrderService`
 принимает бизнес-решения и формирует HTTP-ответ — backend-architecture-review
 (responsibilities)»; «`x.ts:12` — SQL-строка склеивается вручную — владелец
-по ownership matrix».
+не назначен».
 ```
 
 ## Пример заполненного finding
@@ -136,6 +136,8 @@ UsersLayer ⇄ SessionsLayer       cycle
   `revoke` и один Layer `SessionStoreRedis`, который единственный знает ключи
   и TTL. Четыре сервиса получают `SessionStore` в `R` и не знают о Redis.
   Тестовый Layer — по образцу `test/layers/*.ts`, как принято в проекте.
+  В стеке без Effect — тот же contract как interface или Protocol и один
+  adapter; подмена в тестах тем способом, который принят в проекте.
 - **Trade-offs:** ещё один файл и один переход при чтении; `SessionStore`
   становится контрактом, который нужно держать стабильным.
 ```
