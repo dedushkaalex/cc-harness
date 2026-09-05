@@ -1,6 +1,6 @@
 ---
 name: backend-dependency-review
-description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние contract / port / adapter (interface, trait, Protocol, behaviour, объявленный сервис в DI- или effect-системе). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
+description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние contract / port / adapter (interface, trait, Protocol, behaviour, объявленный сервис в DI- или effect-системе). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming; business rules и invariants — это backend-domain-review.
 ---
 
 # Backend dependency review
@@ -24,7 +24,7 @@ description: Review relationships between backend components — находит 
 - не слишком ли много видов работы в одном компоненте;
 - слой компонента: с отчётом architecture-review на входе слой берётся из его таблицы и не вычисляется заново.
 
-SQL, индексы, database queries, performance, security, auth, корректность error handling (потеря контекста, проглоченные ошибки, retry), тесты, naming, folder structure, domain invariants — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
+SQL, индексы, database queries, performance, security, auth, корректность error handling (потеря контекста, проглоченные ошибки, retry), тесты, naming, folder structure — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен». Владелец business rules, invariants, дублирования правил и state transitions — `backend-domain-review`: тип меняется, чтобы компонент перестал знать технологию или другой компонент — здесь; тип меняется, чтобы недопустимое значение нельзя было построить — там.
 
 Примеры на границе:
 
@@ -33,6 +33,7 @@ SQL, индексы, database queries, performance, security, auth, коррек
 - компонент с `@Entity` и бизнес-правилами внутри — **не здесь**: смешение видов работы, владелец architecture-review. Здесь — только стрелка `Domain → ORM` у того, что останется после выноса правил.
 - тип ошибки persistence (`QueryFailedError`, `sqlx::Error`, `IntegrityError`) виден в объявленном типе ошибки или в обработке ошибок application-сценария (канал `E`, `Result`, `catch`, `except`, `match`) — **здесь**: тип ошибки нижнего слоя знает верхний. Правильно ли ошибка обрабатывается — не здесь.
 - два компонента требуют друг друга при сборке (два Layer, два сервиса через `forwardRef`, два пакета с взаимным импортом) — **здесь**: цикл.
+- `amount` хранится числом, и три consumers каждый сам проверяют `amount > 0` — **не здесь**: правило размазано из-за представления concept, владелец `backend-domain-review`.
 
 Всё замеченное вне scope — одной строкой в разделе «Вне scope» с именем skill-владельца.
 

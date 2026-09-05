@@ -49,6 +49,8 @@ Evaluated:
 Not evaluated:
 - dependency direction, coupling, leakage, cycles, abstractions
   Owner: `backend-dependency-review`
+- business rules: bypass paths, duplication, state transitions
+  Owner: `backend-domain-review`
 - SQL, performance, security, error handling, tests, naming
   Owner: not assigned yet
 

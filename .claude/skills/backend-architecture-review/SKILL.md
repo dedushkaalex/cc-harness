@@ -1,6 +1,6 @@
 ---
 name: backend-architecture-review
-description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; не покрывает SQL, performance, security, error handling, тесты, naming, style.
+description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review и backend-domain-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; не покрывает SQL, performance, security, error handling, тесты, naming, style; защиту и дублирование business rules — это backend-domain-review.
 ---
 
 # Backend architecture review
@@ -23,6 +23,8 @@ description: Review backend component responsibilities and placement of work —
 - leakage типов, ошибок, DTO через границы слоёв;
 - зависимости от конкретного SDK, ORM, драйвера;
 - interface / port / adapter / dependency inversion — нужны они или лишние.
+
+Владелец — `backend-domain-review`: можно ли обойти бизнес-правило другим путём записи state, продублировано ли одно правило в независимых местах, достижим ли недопустимый переход статуса, держит ли представление concept своё правило. Правило разделения: здесь — в компоненте какого слоя лежит правило; там — можно ли его обойти. Правило в repository, через который идут все записи, — здесь; правило в своём слое, которое обходит другой путь, — там.
 
 SQL, индексы, performance, security, корректность auth, error handling, тесты, naming, style — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 

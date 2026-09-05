@@ -56,7 +56,9 @@ Evaluated:
 Not evaluated:
 - responsibilities and placement of work
   Owner: `backend-architecture-review`
-- SQL, performance, security, error handling, tests, domain invariants
+- business rules: bypass paths, duplication, state transitions
+  Owner: `backend-domain-review`
+- SQL, performance, security, error handling, tests
   Owner: not assigned yet
 
 ## Dependency map
