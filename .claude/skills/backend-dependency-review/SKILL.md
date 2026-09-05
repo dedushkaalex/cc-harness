@@ -1,6 +1,6 @@
 ---
 name: backend-dependency-review
-description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние contract / port / adapter (interface, trait, Protocol, behaviour, Effect Tag и Layer). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
+description: Review relationships between backend components — находит проблемные dependency direction, leakage типов и ошибок через границы, coupling с конкретной технологией, dependency cycles и лишние contract / port / adapter (interface, trait, Protocol, behaviour, объявленный сервис в DI- или effect-системе). Каждую dependency оценивает по стоимости конкретного изменения, а не по соответствию Dependency Inversion Principle. Второй шаг pipeline после backend-architecture-review, принимает его Architecture summary на вход. Use when нужен dependency review, анализ coupling или circular dependencies, вопрос «что этот компонент знает о других» или «нужен ли здесь port / adapter / dependency inversion», либо dependency-проход внутри многоагентного code review. Do not evaluate whether work is located in the correct component — это backend-architecture-review; не покрывает SQL, performance, security, error handling, тесты, naming, domain invariants.
 ---
 
 # Backend dependency review
@@ -13,7 +13,7 @@ description: Review relationships between backend components — находит 
 
 **Исправления** в этом skill меняют импорты, типы, направление стрелки, abstraction или dependency boundary: передать данные параметром, выделить модуль, который один знает технологию, ввести или убрать contract, перевернуть стрелку. Проверка: если исправление — перенести код в другой компонент, finding не отсюда.
 
-**Contract** здесь и дальше — любой способ объявить зависимость через её форму, а не реализацию: interface, trait, Protocol, behaviour, Effect `Context.Tag`. **Adapter** — реализация contract, единственное место, которое знает технологию: класс, Layer, модуль. Какой механизм в проекте базовый, определяется на Step 0 по коду и тестам, а не по знакомому стеку.
+**Contract** здесь и дальше — любой способ объявить зависимость через её форму, а не реализацию: interface, trait, Protocol, behaviour, тип функции, Effect `Context.Tag`. **Adapter** — реализация contract, единственное место, которое знает технологию: класс, модуль, функция, Layer. Какой механизм в проекте базовый, определяется на Step 0 по коду и тестам, а не по знакомому стеку.
 
 ## Do NOT evaluate
 
@@ -30,7 +30,7 @@ SQL, индексы, database queries, performance, security, auth, коррек
 
 - application-сценарий возвращает тип ORM (`Prisma.UserGetPayload`, `Ecto.Schema`, структура из `sqlc`) — **здесь**: код на месте, чужой только тип.
 - controller, внутри которого написана транзакция и запись в две таблицы — **не здесь**: это код persistence в transport, finding architecture-review. Здесь оценивается стрелка, которая останется после переноса кода.
-- класс с `@Entity` и бизнес-правилами внутри — **не здесь**: смешение видов работы, владелец architecture-review. Здесь — только стрелка `Domain → ORM` у того, что останется после выноса правил.
+- компонент с `@Entity` и бизнес-правилами внутри — **не здесь**: смешение видов работы, владелец architecture-review. Здесь — только стрелка `Domain → ORM` у того, что останется после выноса правил.
 - тип ошибки persistence (`QueryFailedError`, `sqlx::Error`, `IntegrityError`) виден в объявленном типе ошибки или в обработке ошибок application-сценария (канал `E`, `Result`, `catch`, `except`, `match`) — **здесь**: тип ошибки нижнего слоя знает верхний. Правильно ли ошибка обрабатывается — не здесь.
 - два компонента требуют друг друга при сборке (два Layer, два сервиса через `forwardRef`, два пакета с взаимным импортом) — **здесь**: цикл.
 

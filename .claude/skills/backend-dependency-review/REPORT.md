@@ -13,7 +13,7 @@
 | Уровень | Когда | Пример |
 |---|---|---|
 | **P1** | Dependency создаёт существенный architectural coupling или dependency cycle, который реально ограничивает изменения: замена технологии или правка одного модуля требует правок в нескольких несвязанных местах, либо цикл блокирует тестирование и требует обходов при сборке | пять application services знают формат ключей Redis и его pipeline-команды; два Layer требуют друг друга, тесты поднимают оба |
-| **P2** | Dependency заметно ухудшает maintainability или распространяет implementation details между важными boundaries: изменение возможно, но дороже, чем должно быть | application-эффект возвращает Prisma-тип, и три handler'а зависят от его полей; `SqlError` из persistence доходит до transport без преобразования, в типе ошибки или в `catch` |
+| **P2** | Dependency заметно ухудшает maintainability или распространяет implementation details между важными boundaries: изменение возможно, но дороже, чем должно быть | application-сценарий возвращает тип ORM, и три handler'а зависят от его полей; `SqlError` из persistence доходит до transport без преобразования, в типе ошибки или в `catch` |
 | **P3** | Потенциальная проблема или improvement, зависящий от будущего развития системы; из кода вердикт не виден | один сервис напрямую использует SDK внешнего API; станет проблемой при втором consumer или смене версии API |
 
 Architectural preference («я бы перевернул эту стрелку», «по Hexagonal здесь должен быть port») — не finding. Максимум P3, и только если можно назвать изменение, которое станет дороже.
@@ -134,12 +134,13 @@ UsersLayer ⇄ SessionsLayer       cycle
   или переход на другое хранилище — четыре файла и все их тесты.
 - **Confidence:** high — четыре consumer видны в коде; планов замены Redis
   в источниках нет, но сценарий «сменить схему ключей» от планов не зависит.
-- **Suggested solution:** один Tag `SessionStore` с операциями `save`, `find`,
-  `revoke` и один Layer `SessionStoreRedis`, который единственный знает ключи
-  и TTL. Четыре сервиса получают `SessionStore` в `R` и не знают о Redis.
-  Тестовый Layer — по образцу `test/layers/*.ts`, как принято в проекте.
-  В стеке без Effect — тот же contract как interface или Protocol и один
-  adapter; подмена в тестах тем способом, который принят в проекте.
+- **Suggested solution:** один contract `SessionStore` с операциями `save`,
+  `find`, `revoke` и один adapter `SessionStoreRedis`, который единственный
+  знает ключи и TTL. Четыре сервиса объявляют зависимость от `SessionStore`
+  и не знают о Redis. В этом проекте contract — Tag, adapter — Layer,
+  подмена в тестах — тестовый Layer по образцу `test/layers/*.ts`; в другом
+  стеке та же пара как interface, trait или Protocol и одна реализация,
+  подмена тем способом, который принят в проекте.
 - **Trade-offs:** ещё один файл и один переход при чтении; `SessionStore`
   становится контрактом, который нужно держать стабильным.
 ```
