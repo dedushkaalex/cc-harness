@@ -1,6 +1,6 @@
 # Шаблон отчёта
 
-Справочник к последнему шагу из [SKILL.md](SKILL.md). Четыре раздела в этом порядке плюс «Вне scope»; пустой раздел остаётся с пометкой «не найдено», чтобы читатель знал, что проход был.
+Справочник к последнему шагу из [SKILL.md](SKILL.md). Блок Scope, затем четыре раздела в этом порядке плюс «Вне scope»; пустой раздел остаётся с пометкой «не найдено», чтобы читатель знал, что проход был. Блок Scope обязателен: следующий агент в pipeline должен видеть не «этого не проверяли», а кто обязан это проверить.
 
 ## Severity
 
@@ -15,10 +15,27 @@ Architectural preference («я бы перевернул эту стрелку»
 ## Структура
 
 ```markdown
+## Scope
+
+Evaluated:
+- dependency direction, leakage, coupling, cycles
+- abstractions: needed or excessive
+
+Not evaluated:
+- responsibilities and placement of work
+  Owner: `backend-architecture-review`
+- SQL, performance, security, error handling, tests, domain invariants
+  Owner: соответствующие skills
+
+Input: Architecture summary из отчёта `backend-architecture-review`
+(или «отсутствует, карта построена с нуля»).
+
 ## Dependency map
 
 Наиболее важные стрелки — только те, что нужны, чтобы понять findings
 и good dependencies. Слой в скобках там, где он не очевиден из имени.
+Если на входе был отчёт backend-architecture-review — те же имена
+компонентов, что и там.
 
 Controller → Application Service
 Application Service → SessionStore
@@ -63,9 +80,10 @@ UsersModule ⇄ SessionsModule (cycle, forwardRef)
 
 ## Вне scope
 
-Одна строка на замеченное, что проверяют другие skills: «`OrderService`
-принимает бизнес-решения и формирует HTTP-ответ — область
-backend-architecture-review (responsibilities)».
+Одна строка на замеченное, с именем skill-владельца: «`OrderService`
+принимает бизнес-решения и формирует HTTP-ответ — backend-architecture-review
+(responsibilities)»; «`x.ts:12` — SQL-строка склеивается вручную —
+security/SQL review».
 ```
 
 ## Пример заполненного finding
