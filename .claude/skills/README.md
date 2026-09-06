@@ -76,7 +76,7 @@ Categories that touch the same lines of code. Each pair has a one-line rule writ
 
 `backend-review` is the executor of this README, not a sixth reviewer. It never creates a finding, never changes a severity or a confidence, never widens the code under review, and never edits a skill's report. Anything it notices in the code itself is not recorded anywhere.
 
-**What it passes in.** Every skill runs as a separate agent and receives:
+**What it passes in.** Every skill runs as a separate agent — a `backend-<x>-reviewer` subagent from `.claude/agents/` that preloads the skill, restricts tools to reading plus writing the report, and pins the model — and receives:
 
 - the `Shared context` block (format below) instead of running its own Step 0 search — the skill takes it as `Context` and as the code boundary, and collects only what its own Step 0 needs beyond it (rule sources, volumes, retry policies, global handlers, outward error contract), marked "дособрано";
 - the `Scope` and summary blocks of every previous report — Architecture summary, Dependency map, Domain summary, Persistence summary — as input models to verify, not facts;
