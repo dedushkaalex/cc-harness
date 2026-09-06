@@ -54,7 +54,10 @@ Not evaluated:
 - transactions, concurrency, constraints, query cost, migrations,
   mapping, side effects at rollback
   Owner: `backend-persistence-review`
-- security, error handling, tests, naming
+- error handling: потери и глотание, различимость исходов, retry,
+  границы наружу, частичный отказ
+  Owner: `backend-error-handling-review`
+- security, tests, naming
   Owner: not assigned yet
 
 ## Architecture summary

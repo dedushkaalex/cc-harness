@@ -1,6 +1,6 @@
 ---
 name: backend-persistence-review
-description: Review how backend code stores and reads state — находит persistence operations, которые сохраняют state частично, теряют или дублируют запись при параллельном или повторном выполнении, остаются без constraint хранилища там, где только он держит целостность, дают неоправданную стоимость запросов или ломают совместимость при миграции schema. ORM, database engine и architectural pattern — только evidence. Четвёртый шаг pipeline после backend-domain-review, принимает summaries предыдущих skills на вход. Use when нужен persistence review или database review, проверка transactions, race conditions, idempotency, query cost, migrations, вопрос «что будет, если операция выполнится частично, дважды или параллельно», либо persistence-проход в многоагентном code review. Do not evaluate placement of work — backend-architecture-review; знание ORM и leakage типов — backend-dependency-review; business rules и обходные пути — backend-domain-review; не покрывает security, API design, error handling, тесты.
+description: Review how backend code stores and reads state — находит persistence operations, которые сохраняют state частично, теряют или дублируют запись при параллельном или повторном выполнении, остаются без constraint хранилища там, где только он держит целостность, дают неоправданную стоимость запросов или ломают совместимость при миграции schema. ORM и database engine — только evidence. Четвёртый шаг pipeline, принимает summaries предыдущих skills на вход. Use when нужен persistence review или database review, проверка transactions, race conditions, idempotency, query cost, migrations, вопрос «что будет, если операция выполнится частично, дважды или параллельно», либо persistence-проход в многоагентном code review. Do not evaluate placement of work — backend-architecture-review; знание ORM и leakage типов — backend-dependency-review; business rules и обходные пути — backend-domain-review; что сообщено вызывающему после сбоя, retry — backend-error-handling-review; не покрывает security, API design, тесты.
 ---
 
 # Backend persistence review
@@ -23,9 +23,13 @@ Persistence — любое хранилище state за пределами пр
 
 Владелец — `backend-domain-review`: существует ли business rule, кто его владелец, есть ли существующий путь записи в обход проверки, дублирование правил, недопустимые state transitions.
 
-Security (injection, доступ к данным), HTTP/API design, общий error handling (потеря контекста, проглоченные ошибки, что показать клиенту при нарушении constraint), тесты, performance вне persistence (CPU, сериализация, вызовы внешних API) — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
+Владелец — `backend-error-handling-review`: потеря контекста ошибки, проглоченные ошибки, различимость исходов для вызывающего, политика повторов, что показать клиенту при нарушении constraint, сообщение о частичном отказе.
+
+Security (injection, доступ к данным), HTTP/API design, тесты, performance вне persistence (CPU, сериализация, вызовы внешних API) — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
 **Правило разделения с domain-review:** там спрашивают, есть ли правило и проходит ли через него каждый путь; здесь — держит ли хранилище правило, когда все пути через него проходят, но операции выполняются параллельно, повторно или частично. Один из путей проверку не делает — там. Проверка есть на каждом пути, а два параллельных запроса проходят её по одному и тому же снимку — здесь.
+
+**Правило разделения с error-handling-review:** здесь — что осталось в хранилище после сбоя на втором шаге; там — что об этом сообщено вызывающему. Идемпотентен ли повтор — здесь; стоит ли повторять и сколько раз — там.
 
 **Правило разделения с dependency-review:** там — кто знает тип хранилища и во что обойдётся его замена; здесь — совпадает ли смысл значения в хранилище и в приложении. Сценарий возвращает тип ORM — там. Приложение читает `NULL` в колонке как «ещё не оплачен», а другой путь пишет туда `NULL` для «оплата отменена» — здесь.
 

@@ -60,7 +60,10 @@ Not evaluated:
 - transactions, concurrency, constraints, query cost, migrations,
   mapping, side effects at rollback
   Owner: `backend-persistence-review`
-- API design, security, error handling, tests
+- error handling: потери и глотание, различимость исходов, retry,
+  границы наружу, частичный отказ
+  Owner: `backend-error-handling-review`
+- API design, security, tests
   Owner: not assigned yet
 
 ## Domain summary
@@ -124,7 +127,7 @@ Not evaluated:
 Одна строка на замеченное, с именем skill-владельца: «`refund.job.ts:5` —
 job сам открывает транзакцию и пишет в две таблицы —
 backend-architecture-review»; «`transfer.ts:52` — нарушение CHECK доходит до
-клиента как 500 — error handling, владелец не назначен».
+клиента как 500 — backend-error-handling-review».
 ```
 
 ## Пример заполненного finding

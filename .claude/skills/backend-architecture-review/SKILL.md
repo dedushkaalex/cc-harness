@@ -1,6 +1,6 @@
 ---
 name: backend-architecture-review
-description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review, backend-domain-review и backend-persistence-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; защиту и дублирование business rules — это backend-domain-review; transactions, concurrency, constraints хранилища, query cost, migrations — это backend-persistence-review; не покрывает security, error handling, тесты, naming, style.
+description: Review backend component responsibilities and placement of work — находит компоненты, которые выполняют работу другого компонента или слоя, и код, лежащий не в своём слое; предлагает перенос кода без новых abstraction. Первый шаг pipeline перед backend-dependency-review, backend-domain-review, backend-persistence-review и backend-error-handling-review. Use when нужен architecture review или design review backend-сервиса, вопрос «что делает этот компонент и где должна лежать эта работа», либо архитектурный проход внутри многоагентного code review. Do not evaluate dependency direction, coupling, leakage, cycles, abstractions — это backend-dependency-review; защиту и дублирование business rules — это backend-domain-review; transactions, concurrency, constraints хранилища, query cost, migrations — это backend-persistence-review; потери и глотание ошибок, различимость исходов, retry, что уходит наружу — это backend-error-handling-review; не покрывает security, тесты, naming, style.
 ---
 
 # Backend architecture review
@@ -28,7 +28,9 @@ description: Review backend component responsibilities and placement of work —
 
 Владелец — `backend-persistence-review`: transaction boundaries и atomicity, concurrency, constraints хранилища, стоимость запросов, idempotency записей, совместимость миграций, mapping смысла значения между хранилищем и приложением, side effects при rollback. Транзакция лежит не в том компоненте — здесь; покрывает ли она обе записи — там.
 
-Security, корректность auth, error handling, тесты, naming, style, performance вне persistence — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
+Владелец — `backend-error-handling-review`: путь ошибки от места возникновения до вызывающего или до внешней границы — потеря и глотание, сохранение причины, различимость исходов, политика повторов, что уходит наружу, сообщение о частичном отказе. Код обработки ошибок лежит не в том компоненте — здесь; что он делает с ошибкой — там.
+
+Security, корректность auth, тесты, naming, style, performance вне persistence — другие skills, когда появятся; пока такие места уходят в «Вне scope» с названием категории и пометкой «владелец не назначен».
 
 Всё, через что компонент получает другие компоненты (импорты, параметры конструкторов и функций, объявленные требования, глобальные объекты), **собирается** на Step 1 в колонку «использует»: это данные для следующего skill. Собирать нужно, оценивать нельзя. «`SessionService` использует Redis для хранения сессий» — факт в карте. «`SessionService` напрямую зависит от Redis» — finding, которого в этом отчёте нет.
 

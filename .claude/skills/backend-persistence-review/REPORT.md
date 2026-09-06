@@ -61,7 +61,10 @@ Not evaluated:
   Owner: `backend-dependency-review`
 - business rules: bypass paths, duplication, state transitions
   Owner: `backend-domain-review`
-- security, API design, error handling, tests, performance outside persistence
+- error handling: потери и глотание, различимость исходов, retry,
+  границы наружу, частичный отказ
+  Owner: `backend-error-handling-review`
+- security, API design, tests, performance outside persistence
   Owner: not assigned yet
 
 ## Persistence summary
@@ -123,7 +126,7 @@ Not evaluated:
 Одна строка на замеченное, с именем skill-владельца: «`order.controller.ts:31`
 — транзакция и запись в две таблицы лежат в transport —
 backend-architecture-review»; «`transfer.ts:52` — нарушение CHECK доходит до
-клиента как 500 — error handling, владелец не назначен».
+клиента как 500 — backend-error-handling-review».
 ```
 
 ## Пример заполненного finding
