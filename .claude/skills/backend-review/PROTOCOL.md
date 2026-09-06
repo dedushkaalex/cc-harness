@@ -88,7 +88,7 @@ Deployment model: два экземпляра, rolling deploy; очередь з
 
 ### Промт агента
 
-Запуск: Agent tool, `subagent_type: backend-<x>-reviewer`, промт ниже целиком.
+Запуск: Agent tool, `subagent_type: backend-<x>-reviewer`, промт ниже целиком. Модель агент возвращает сам, строкой в счётчиках: если `model:` обёртки в момент запуска недоступна (лимит пула, план), Claude Code запускает агента на модели сессии, и ни в его отчёте, ни в итоговом это иначе не видно. Строка попадает в колонку `Модель` таблицы Scope итогового отчёта.
 
 ```text
 Ты выполняешь skill `backend-<x>-review` как шаг pipeline `backend-review`.
@@ -108,7 +108,8 @@ Deployment model: два экземпляра, rolling deploy; очередь з
 5. Полный отчёт по своему REPORT.md запиши в `<output-dir>/backend-<x>-review.md`.
 6. В ответ верни только: блок Scope, блок <Summary>, раздел «Вне scope», раздел
    `Handoff verdicts`, если он есть, и счётчики: findings по severity, Non-findings,
-   записи в разделе защит. Ничего больше — findings целиком не возвращай.
+   записи в разделе защит, модель, на которой ты работал (model ID из своего окружения;
+   если его там нет — «unknown»). Ничего больше — findings целиком не возвращай.
 
 ## Shared context
 <блок из shared-context.md>

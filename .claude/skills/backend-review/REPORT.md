@@ -35,7 +35,7 @@ Output: `reviews/2026-09-06-pr-42/`
 
 Code under review: `src/billing/**`, `src/http/billing.controller.ts`,
 `src/jobs/refund.job.ts` (diff PR #42 плюс один шаг по графу вызовов).
-Граница одна для всех скиллов.
+Граница одна для всех скиллов. Колонка `Модель` — то, что агент вернул в счётчиках; если это не `model:` его обёртки в `.claude/agents/`, ожидавшаяся модель указывается в скобках.
 
 Shared context — `reviews/2026-09-06-pr-42/shared-context.md`:
 - Известно: один transport (HTTP) плюс job возвратов — README, docker-compose
@@ -46,13 +46,13 @@ Shared context — `reviews/2026-09-06-pr-42/shared-context.md`:
 - Базовая единица: class + параметр конструктора, регистрация в DI
 - Базовая единица ошибки: исключение; на границе — exception filter
 
-| Skill | Отчёт | Граница | Findings | Handoffs |
-|---|---|---|---|---|
-| `backend-architecture-review` | `…/backend-architecture-review.md` | = Shared context | P1 0 · P2 4 · P3 3 | closed 4 · unresolved 0 |
-| `backend-dependency-review` | `…/backend-dependency-review.md` | = Shared context | P1 1 · P2 2 · P3 1 | closed 2 · unresolved 1 |
-| `backend-domain-review` | `…/backend-domain-review.md` | = Shared context | P1 1 · P2 1 · P3 2 | closed 3 · unresolved 0 |
-| `backend-persistence-review` | `…/backend-persistence-review.md` | = Shared context | P1 1 · P2 2 · P3 0 | closed 2 · unresolved 0 |
-| `backend-error-handling-review` | — | — | — | пропущен, см. Skipped |
+| Skill | Отчёт | Граница | Модель | Findings | Handoffs |
+|---|---|---|---|---|---|
+| `backend-architecture-review` | `…/backend-architecture-review.md` | = Shared context | claude-fable-5-1 | P1 0 · P2 4 · P3 3 | closed 4 · unresolved 0 |
+| `backend-dependency-review` | `…/backend-dependency-review.md` | = Shared context | claude-fable-5-1 | P1 1 · P2 2 · P3 1 | closed 2 · unresolved 1 |
+| `backend-domain-review` | `…/backend-domain-review.md` | = Shared context | claude-opus-5 (ожидалась fable) | P1 1 · P2 1 · P3 2 | closed 3 · unresolved 0 |
+| `backend-persistence-review` | `…/backend-persistence-review.md` | = Shared context | claude-fable-5-1 | P1 1 · P2 2 · P3 0 | closed 2 · unresolved 0 |
+| `backend-error-handling-review` | — | — | — | — | пропущен, см. Skipped |
 
 Не запускались (частичный режим): нет.
 
