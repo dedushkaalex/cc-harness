@@ -80,7 +80,7 @@ Categories that touch the same lines of code. Each pair has a one-line rule writ
 
 - the `Shared context` block (format below) instead of running its own Step 0 search — the skill takes it as `Context` and as the code boundary, and collects only what its own Step 0 needs beyond it (rule sources, volumes, retry policies, global handlers, outward error contract), marked "дособрано";
 - the `Scope` and summary blocks of every previous report — Architecture summary, Dependency map, Domain summary, Persistence summary — as input models to verify, not facts;
-- the `Вне scope` lines of previous reports whose owner is this skill, including owner mentions inside findings ("Вне scope: backend-persistence-review" in Trade-offs). Each must get a verdict on the same file and line. A verdict that has no section in the skill's own template goes to a `## Handoff verdicts` section at the end of the report, written by the skill itself.
+- the `Вне scope` lines of previous reports whose owner is this skill, including owner mentions inside findings ("Вне scope: backend-persistence-review" in Trade-offs). Each must get a verdict on the same file and line. A verdict that has no section in the skill's own template goes to a `## Handoff verdicts` section at the end of the report, written by the skill itself; the section exists only in pipeline runs, its format is in `backend-review/PROTOCOL.md`, Stage B.
 
 Full findings of previous reports are not passed; a skill reads a specific place from `<output-dir>/<skill>.md` when it needs one. Mismatches always point at a skill that has already run, so they are closed after the sequence by a targeted pass: the owner is called once with only those lines and the instruction to give verdicts and do nothing else.
 
@@ -90,7 +90,7 @@ Full findings of previous reports are not passed; a skill reads a specific place
 - every `Вне scope` line and every Mismatch has a verdict in the owner's report on the same place — finding, Non-finding, existing protection or `Handoff verdicts`; what the targeted pass leaves open goes to `Unresolved handoffs`;
 - one place is not described by two findings of one category: the owner by this matrix keeps it, the other finding becomes a "дубль снят" note under the owner's; two findings of different categories on one place are what the splitting-rule table designs, and they are cross-linked;
 - a protection in one report against a finding in another that denies it goes to `Conflicts` with both positions and the splitting rule quoted — unresolved;
-- every finding has evidence with file and line, the owner's scenario field, a confidence with a basis, severity P1–P3, and passes the substitution test on Problem and Why it matters; otherwise it is listed in `Dropped` with the reason and stays in the owner's report.
+- every finding has evidence with file and line, the owner's scenario field, a confidence with a basis and a severity P1–P3 — four presence checks; a finding that fails one is listed in `Dropped` with the reason and stays in the owner's report. The substitution test on Problem and Why it matters is a note, not a check: a doubtful result is written into the finding's `Pipeline:` line and the finding stays, because that result is a judgement about content.
 
 Then one merged report, finding texts verbatim from the owners with an owner tag and a `Pipeline:` line. Details: `backend-review/PROTOCOL.md`, template: `backend-review/REPORT.md`.
 
@@ -105,11 +105,13 @@ Code under review: src/billing/**, src/http/billing.controller.ts, src/jobs/refu
 
 Известно:    один transport (HTTP) плюс job возвратов — README, docker-compose
 Известно:    два экземпляра API, rolling deploy — k8s/deployment.yaml, CI
+Известно:    webhook оплаты повторяется до 5 раз при таймауте — docs/payments.md
 Не известно: планируется ли второе хранилище — в источниках нет
 Deployment model: два экземпляра, rolling deploy; очередь заказов at-least-once — infra/queue.yaml
-Источники повторов: webhook оплаты — docs/payments.md; retry в HTTP-клиенте платежей — не известно
+Источники повторов: webhook оплаты — docs/payments.md; очередь заказов — infra/queue.yaml;
+             retry в HTTP-клиенте платежей — не известно
 Базовая единица: class + параметр конструктора, регистрация в DI — источник: все сервисы
              в src/; подмена в тестах: override provider, test/**/*.spec.ts
-Базовая единица ошибки: исключение — источник: сценарии в src/** бросают и ловят; на границе —
-             exception filter, src/main.ts:18
+Базовая единица ошибки: исключение — источник: сценарии в src/** бросают и ловят, объявленных
+             типов ошибок в сигнатурах нет; на границе — exception filter, src/main.ts:18
 ```

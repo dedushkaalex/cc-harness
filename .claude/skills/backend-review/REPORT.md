@@ -13,14 +13,14 @@
 
 1. **Scope:** Evaluated — объединение списков Evaluated отработавших скиллов; Not evaluated — категории пропущенных и не запускавшихся скиллов с владельцем и причиной, плюс категории «владелец не назначен». Читатель видит не «этого не проверяли», а кто обязан был проверить и почему не проверил.
 2. **Порядок findings:** P1 → P2 → P3; внутри уровня — порядок pipeline владельца, внутри владельца — порядок его отчёта. В 15 попадают первые по этому порядку.
-3. **Текст finding** — из отчёта владельца целиком и без правок: заголовок и все поля. Заголовок получает тег владельца: `### [P1] `backend-persistence-review` — Название`. В конец добавляется одна строка `- **Pipeline:**` — ссылка на отчёт и пометки: «зависит от [Px] `<skill>` „…“», «дубль снят: `<skill>` описал то же место как [Px] „…“», «то же место с другой стороны: [Px] `<skill>` „…“», «см. Conflicts».
+3. **Текст finding** — из отчёта владельца целиком и без правок: заголовок и все поля. Заголовок получает тег владельца: `### [P1] `backend-persistence-review` — Название`. В конец добавляется одна строка `- **Pipeline:**` — ссылка на отчёт и пометки: «зависит от [Px] `<skill>` „…“», «дубль снят: `<skill>` описал то же место как [Px] „…“», «то же место с другой стороны: [Px] `<skill>` „…“», «см. Conflicts», «substitution test: сомнительно, см. владельца».
 4. **Severity и Confidence** — владельца; дубль с другим уровнем на них не влияет.
 5. **Existing protections** — объединение `Good decisions`, `Good dependencies`, `Protected invariants`, `Existing protections` (persistence), `Existing protections` (error handling). Строка = тег владельца + текст владельца. Одно место у двух — строка первого по pipeline с тегами обоих.
 6. **Non-findings** — счётчик на skill и ссылка на раздел; у `backend-architecture-review` и `backend-dependency-review` раздела нет — так и записано. `Overengineering` dependency-review — одной строкой со счётчиком здесь же.
 7. **«Вне scope»** — только категории «владелец не назначен»: security, API design, tests, naming, log format, performance outside persistence и что ещё встретилось. Строка = категория — места через запятую, каждое с тегом источника. Строки с назначенным владельцем сюда не попадают: закрытые учтены счётчиком в Scope, незакрытые — в Unresolved handoffs.
 8. **Unresolved handoffs** — место, фраза, источник, владелец, причина: «вердикта нет после адресного прохода», «владелец пропущен», «владелец не запускался», «появилась в адресном проходе».
 9. **Conflicts** — место; обе позиции дословно с именем skill и раздела; правило из README; строка «не разрешено оркестратором».
-10. **Dropped** — finding владельца одной строкой: уровень, тег, название, номер проверки Stage E и причина, ссылка на отчёт.
+10. **Dropped** — finding владельца одной строкой: уровень, тег, название, номер проверки Stage E (1–4) и причина, ссылка на отчёт.
 11. **Skipped** — skill, причина обоих сбоев, кто работал без его отчёта, сколько строк ему адресовано.
 
 ## Структура
@@ -50,7 +50,7 @@ Shared context — `reviews/2026-09-06-pr-42/shared-context.md`:
 |---|---|---|---|---|
 | `backend-architecture-review` | `…/backend-architecture-review.md` | = Shared context | P1 0 · P2 4 · P3 3 | closed 4 · unresolved 0 |
 | `backend-dependency-review` | `…/backend-dependency-review.md` | = Shared context | P1 1 · P2 2 · P3 1 | closed 2 · unresolved 1 |
-| `backend-domain-review` | `…/backend-domain-review.md` | шире: + `src/import/**` | P1 1 · P2 1 · P3 2 | closed 3 · unresolved 0 |
+| `backend-domain-review` | `…/backend-domain-review.md` | = Shared context | P1 1 · P2 1 · P3 2 | closed 3 · unresolved 0 |
 | `backend-persistence-review` | `…/backend-persistence-review.md` | = Shared context | P1 1 · P2 2 · P3 0 | closed 2 · unresolved 0 |
 | `backend-error-handling-review` | — | — | — | пропущен, см. Skipped |
 
@@ -146,5 +146,6 @@ Not evaluated:
 - Finding, которого нет в отчёте владельца, — в том числе «очевидный», «который все пропустили».
 - Вердикт на строку handoff вместо владельца — даже «это явно не проблема».
 - Изменённый уровень, confidence или переформулированный Problem.
+- Finding в `Dropped` по substitution test — сомнение идёт пометкой в строке `Pipeline:`.
 - Разрешение конфликта: «прав persistence-review».
 - Места вне границы кода под ревью, которые оркестратор увидел сам.
